@@ -23,7 +23,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/rakyll/goproxyproxy/proxy"
+	"github.com/rakyll/goproxy-s3/proxy"
 )
 
 var (
@@ -41,7 +41,7 @@ func main() {
 	flag.StringVar(&bucket, "bucket", "", "")
 	flag.Parse()
 
-	log.SetPrefix("goproxyproxy: ")
+	log.SetPrefix("goproxy-s3: ")
 
 	if bucket == "" {
 		log.Fatalln("Please provide an S3 bucket name")

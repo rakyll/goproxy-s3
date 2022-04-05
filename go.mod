@@ -1,4 +1,4 @@
-module github.com/rakyll/goproxyproxy
+module github.com/rakyll/goproxy-s3
 
 go 1.17
 
