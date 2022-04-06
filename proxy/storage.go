@@ -131,6 +131,7 @@ func (c *Copier) upload(src string, dest string) error {
 		Bucket: aws.String(c.bucket),
 		Key:    aws.String(key),
 	})
+	// TODO(jbd): Check sum.
 	if aerr, ok := err.(awserr.Error); ok {
 		if aerr.Code() == errCodeNotFound {
 			log.Printf("Uploading %q", key)
