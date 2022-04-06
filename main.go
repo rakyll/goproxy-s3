@@ -30,14 +30,16 @@ var (
 	listen string
 	admin  string // Admin API...
 
-	region string
-	bucket string
+	region   string
+	endpoint string
+	bucket   string
 )
 
 func main() {
 	flag.StringVar(&listen, "listen", ":8080", "")
 	flag.StringVar(&admin, "admin", ":9999", "")
 	flag.StringVar(&region, "region", "", "")
+	flag.StringVar(&endpoint, "endpoint", "", "")
 	flag.StringVar(&bucket, "bucket", "", "")
 	flag.Parse()
 
@@ -50,6 +52,9 @@ func main() {
 	cfg := &aws.Config{}
 	if region != "" {
 		cfg.Region = aws.String(region)
+	}
+	if endpoint != "" {
+		cfg.Endpoint = aws.String(endpoint)
 	}
 	sess, err := session.NewSession(cfg)
 	if err != nil {
