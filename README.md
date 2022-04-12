@@ -18,6 +18,11 @@ the admin endpoint. An example:
 $ curl -X POST http://localhost:9999/golang.org/x/text@v0.3.7
 ```
 
+To force replace a package and its transient dependencies:
+```
+$ curl -X POST http://localhost:9999/golang.org/x/text@v0.3.7?f=true
+```
+
 Set the GOPROXY to the goproxy-s3 endpoint and your modules will be served from S3.
 
 ```

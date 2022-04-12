@@ -91,7 +91,7 @@ func NewCopier(s *session.Session, bucket string) *Copier {
 // Copy will run go mod download locally for the given
 // module and upload artifacts to S3. Copy will
 // ensure all transient dependencies are copied.
-func (c *Copier) Copy(m module.Version) error {
+func (c *Copier) Copy(force bool, m module.Version) error {
 	log.Printf("Resolving module: %s", m)
 	info, err := goModDownload(m)
 	if err != nil {
@@ -110,14 +110,14 @@ func (c *Copier) Copy(m module.Version) error {
 			return nil
 		}
 		o := strings.Replace(path, assetsDir, "", 1)
-		return c.upload(path, o)
+		return c.upload(force, path, o)
 	}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *Copier) upload(src string, dest string) error {
+func (c *Copier) upload(force bool, src string, dest string) error {
 	f, err := os.OpenFile(src, os.O_RDONLY, 0)
 	if err != nil {
 		return err
@@ -126,20 +126,28 @@ func (c *Copier) upload(src string, dest string) error {
 
 	key := "modules" + dest
 
+	uploader := func() error {
+		log.Printf("Uploading %q", key)
+		_, err = c.uploader.Upload(&s3manager.UploadInput{
+			Bucket: aws.String(c.bucket),
+			Key:    aws.String(key),
+			Body:   f,
+		})
+		return err
+	}
+
+	if force {
+		return uploader()
+	}
+
 	log.Printf("Checking if %q exists", key)
 	_, err = c.uploader.S3.HeadObject(&s3.HeadObjectInput{
 		Bucket: aws.String(c.bucket),
 		Key:    aws.String(key),
 	})
-	// TODO(jbd): Check sum.
 	if aerr, ok := err.(awserr.Error); ok {
 		if aerr.Code() == errCodeNotFound {
-			log.Printf("Uploading %q", key)
-			_, err = c.uploader.Upload(&s3manager.UploadInput{
-				Bucket: aws.String(c.bucket),
-				Key:    aws.String(key),
-				Body:   f,
-			})
+			return uploader()
 		}
 	}
 	return err
@@ -169,12 +177,18 @@ func (c *Copier) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+
 	path, version, ok := parseURLPathForModule(r.URL.Path)
 	if !ok {
 		http.Error(w, "malformed module path or version", http.StatusBadRequest)
 		return
 	}
-	if err := c.Copy(module.Version{Path: path, Version: version}); err != nil {
+
+	var force bool
+	if f := r.URL.Query().Get("f"); f == "true" {
+		force = true
+	}
+	if err := c.Copy(force, module.Version{Path: path, Version: version}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
