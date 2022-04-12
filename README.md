@@ -1,5 +1,7 @@
 # goproxy-s3
 
+[![Go](https://github.com/rakyll/goproxy-s3/actions/workflows/go.yml/badge.svg)](https://github.com/rakyll/goproxy-s3/actions/workflows/go.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/rakyll/goproxy-s3/proxy.svg)](https://pkg.go.dev/github.com/rakyll/goproxy-s3/proxy)
+
 A Go module proxy that serves modules from S3.
 
 Note: The project is not yet stable, there could be breaking changes.
