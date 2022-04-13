@@ -6,8 +6,14 @@ A Go module proxy that serves modules from S3.
 
 Note: The project is not yet stable, there could be breaking changes.
 
+## Running
+
 ```
-$ goproxy-s3 -bucket=my-go-proxy-bucket -region=us-west-2
+$ docker run -p 8080:8080 -p 9999:9999 \
+      -e AWS_PROFILE=default \
+      -v ~/.aws:/root/.aws \
+      public.ecr.aws/q1p8v8z2/goproxy-s3:latest \
+      -bucket=my-bucket -region=us-west-2;
 goproxy-s3: 2022/03/29 09:43:32 Proxy server is starting at ":8080"; set GOPROXY
 goproxy-s3: 2022/03/29 09:43:32 Admin server is starting at ":9999"
 ```
