@@ -18,8 +18,7 @@ goproxy-s3: 2022/03/29 09:43:32 Proxy server is starting at ":8080"; set GOPROXY
 goproxy-s3: 2022/03/29 09:43:32 Admin server is starting at ":9999"
 ```
 
-To copy a package and its transient dependencies to S3, send a POST request to
-the admin endpoint. An example:
+To copy a package and its transient dependencies to S3:
 ```
 $ curl -X POST http://localhost:9999/golang.org/x/text@v0.3.7
 ```
