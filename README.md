@@ -6,7 +6,7 @@ A Go module proxy that serves modules from S3.
 
 Note: The project is not yet stable, there could be breaking changes.
 
-## Running
+## Guide
 
 ```
 $ docker run -p 8080:8080 -p 9999:9999 \
