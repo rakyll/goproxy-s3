@@ -30,38 +30,50 @@ var (
 	listen string
 	admin  string // Admin API...
 
+	provider string // s3, gcs, etc
 	region   string
-	endpoint string
 	bucket   string
+	endpoint string // cloud API endpoint
 )
 
 func main() {
 	flag.StringVar(&listen, "listen", ":8080", "")
 	flag.StringVar(&admin, "admin", ":9999", "")
+
+	flag.StringVar(&provider, "provider", "s3", "")
 	flag.StringVar(&region, "region", "", "")
-	flag.StringVar(&endpoint, "endpoint", "", "")
 	flag.StringVar(&bucket, "bucket", "", "")
+	flag.StringVar(&endpoint, "endpoint", "", "")
+
 	flag.Parse()
 
 	log.SetPrefix("goproxy-s3: ")
 
 	if bucket == "" {
-		log.Fatalln("Please provide an S3 bucket name")
+		log.Fatalln("Please provide a bucket name")
 	}
 
-	cfg := &aws.Config{}
-	if region != "" {
-		cfg.Region = aws.String(region)
-	}
-	if endpoint != "" {
-		cfg.Endpoint = aws.String(endpoint)
-	}
-	sess, err := session.NewSession(cfg)
-	if err != nil {
-		log.Fatalf("Cannot create AWS session: %v", err)
+	var downloader proxy.Downloader
+	var copier proxy.Copier
+	switch provider {
+	case "s3":
+		cfg := &aws.Config{}
+		if region != "" {
+			cfg.Region = aws.String(region)
+		}
+		if endpoint != "" {
+			cfg.Endpoint = aws.String(endpoint)
+		}
+		sess, err := session.NewSession(cfg)
+		if err != nil {
+			log.Fatalf("Cannot create AWS session: %v", err)
+		}
+		copier = proxy.NewS3Copier(sess, bucket)
+		downloader = proxy.NewS3Downloader(sess, bucket)
+	default:
+		log.Fatalf("Unknown provider: %q", provider)
 	}
 
-	copier := proxy.NewCopier(sess, bucket)
 	adminServer := http.Server{
 		Addr:    admin,
 		Handler: copier,
@@ -77,7 +89,7 @@ func main() {
 			InsecureSkipVerify: true, // TODO(jbd): Support TLS options.
 		},
 		Handler: &proxy.ProxyHandler{
-			Downloader: proxy.NewDownloader(sess, bucket),
+			Downloader: downloader,
 		},
 	}
 	log.Printf("Proxy server is starting at %q; set GOPROXY", listen)

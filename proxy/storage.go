@@ -44,15 +44,19 @@ const (
 
 const errCodeNotFound = "NotFound" // See https://github.com/aws/aws-sdk-go/issues/1208.
 
-// Downloader reads a Go module from an S3 bucket.
+type Downloader interface {
+	Download(modulePath string, name string) (io.ReadCloser, error)
+}
+
+// S3Downloader reads a Go module from an S3 bucket.
 // Use NewDownloader to initialize one.
-type Downloader struct {
+type S3Downloader struct {
 	bucket string
 	client *s3.S3
 }
 
-func NewDownloader(s *session.Session, bucket string) *Downloader {
-	return &Downloader{
+func NewS3Downloader(s *session.Session, bucket string) *S3Downloader {
+	return &S3Downloader{
 		bucket: bucket,
 		client: s3.New(s),
 	}
@@ -61,7 +65,7 @@ func NewDownloader(s *session.Session, bucket string) *Downloader {
 // Download downloads a module from an S3 bucket. modulePath is the import
 // path of the module, e.g. golang.org/x/text. name is the asset's name such as
 // v0.3.0.info, v0.3.0.mod, v0.3.0.ziphash, or v0.3.0.zip.
-func (d *Downloader) Download(modulePath string, name string) (io.ReadCloser, error) {
+func (d *S3Downloader) Download(modulePath string, name string) (io.ReadCloser, error) {
 	o, err := d.client.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(d.bucket),
 		Key:    aws.String(fmt.Sprintf("modules/%s/@v/%s", modulePath, name)),
@@ -72,17 +76,23 @@ func (d *Downloader) Download(modulePath string, name string) (io.ReadCloser, er
 	return o.Body, nil
 }
 
-// Copier copies a module to S3. Use NewCopier to initiate one.
-type Copier struct {
+type Copier interface {
+	Copy(force bool, m module.Version) error
+	ServeHTTP(w http.ResponseWriter, r *http.Request)
+	// TODO(jbd): Remove ServeHTTP from Copier.
+}
+
+// S3Copier copies a module to S3. Use NewCopier to initiate one.
+type S3Copier struct {
 	// TODO(jbd): Allow Copier to be an abstract type to support
 	// vendors other than S3.
 	bucket   string
 	uploader *s3manager.Uploader
 }
 
-func NewCopier(s *session.Session, bucket string) *Copier {
+func NewS3Copier(s *session.Session, bucket string) *S3Copier {
 	uploader := s3manager.NewUploader(s)
-	return &Copier{
+	return &S3Copier{
 		bucket:   bucket,
 		uploader: uploader,
 	}
@@ -91,7 +101,7 @@ func NewCopier(s *session.Session, bucket string) *Copier {
 // Copy will run go mod download locally for the given
 // module and upload artifacts to S3. Copy will
 // ensure all transient dependencies are copied.
-func (c *Copier) Copy(force bool, m module.Version) error {
+func (c *S3Copier) Copy(force bool, m module.Version) error {
 	log.Printf("Resolving module: %s", m)
 	info, err := goModDownload(m)
 	if err != nil {
@@ -117,7 +127,7 @@ func (c *Copier) Copy(force bool, m module.Version) error {
 	return nil
 }
 
-func (c *Copier) upload(force bool, src string, dest string) error {
+func (c *S3Copier) upload(force bool, src string, dest string) error {
 	f, err := os.OpenFile(src, os.O_RDONLY, 0)
 	if err != nil {
 		return err
@@ -171,7 +181,7 @@ func shouldUpload(fi os.FileInfo) bool {
 	return false
 }
 
-func (c *Copier) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (c *S3Copier) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// POST http://localhost:9999/golang.org/x/text@v3.0.1
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)

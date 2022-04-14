@@ -29,9 +29,7 @@ import (
 )
 
 type ProxyHandler struct {
-	Downloader *Downloader
-	// TODO(jbd): Allow downloader to be an interface and multiple
-	// vendor implementations are available.
+	Downloader Downloader
 }
 
 // ServeHTTP implement a Go proxy server handler.
