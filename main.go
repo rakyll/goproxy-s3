@@ -47,6 +47,8 @@ func main() {
 
 	flag.Parse()
 
+	// TODO(jbd): Consider changing the binary name once
+	// there are multiple provider implementations.
 	log.SetPrefix("goproxy-s3: ")
 
 	if bucket == "" {
